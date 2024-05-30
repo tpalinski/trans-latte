@@ -1,7 +1,26 @@
 package templates
 
-templ HomePage(name string) {
-	<div>
-		Hello, {name}!
+templ homePageContent() {
+	<div class="text-2xl">
+		This is a home page of the application
 	</div>
+	<div id="api-res">
+	Here goes the response from the api.		
+	</div>
+	<button type="button" 
+	hx-get="/api"
+	hx-target="#api-res"
+	hx-trigger='click'
+	hx-swap="innerHTML"
+	class="rounded-xl bg-violet-900 text-white border-white">
+
+	Should magically replace the text above
+
+	</button>
+}
+
+templ HomePage() {
+	@Wrapper() {
+		@homePageContent()
+	}
 }
