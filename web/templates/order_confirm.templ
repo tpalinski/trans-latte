@@ -1,0 +1,26 @@
+package templates
+
+import "net/http"
+import "github.com/google/uuid"
+import "fmt"
+
+templ orderPageContent(link string) {
+	<h2 class="text-xl"> Thank you for your order </h2>
+	<div>
+		Please use the link below to check the status of your order: <br/>
+		{link}
+	</div>
+}
+
+templ OrderPage(link string) {
+	@Wrapper() {
+		@orderPageContent(link) 
+	}
+}
+
+func HandleOrderForm() http.Handler {
+	id, _ := uuid.NewUUID()
+	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String());
+	//TODO - actual submission logic
+	return templ.Handler(OrderPage(link))
+}
