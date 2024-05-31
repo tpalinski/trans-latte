@@ -1,13 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+	"web/storage"
 )
 
 func main() {
-	println("Starting server");
+	log.Println("Starting server");
 	mux := InitializeRoutes();
-	fmt.Println("Listening on :2137");
+	log.Println("Connecting to minio instance")
+	storage.InitializeMinioClient();
+	log.Println("Listening on :2137");
 	http.ListenAndServe(":2137", mux);
 }
