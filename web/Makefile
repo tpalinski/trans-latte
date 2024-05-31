@@ -7,3 +7,8 @@ dev:
 	templ generate
 	tailwindcss -i css/input.css -o assets/css/styles.css --minify
 	go run .
+
+.PHONY: build
+build:
+	tailwindcss -i css/input.css -o assets/css/styles.css --minify
+	go build .
