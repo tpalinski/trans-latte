@@ -8,7 +8,7 @@ services:
     environment:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_ADDRESS: minio
+      MINIO_ADDRESS: minio:9000
   minio:
     image: minio/minio:latest
     ports:
@@ -19,7 +19,9 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - ./minio/data:/data:rw
-    command: server /data --console-address ":9001" 
+    command: server /data --console-address ":9001" --address ":9000"
+    networks:
+      - transnet
 
 networks:
   transnet:

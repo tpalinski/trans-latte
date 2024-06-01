@@ -3,6 +3,7 @@ package templates
 import "net/http"
 import "github.com/google/uuid"
 import "fmt"
+import "web/storage"
 
 templ orderPageContent(link string) {
 	<h2 class="text-xl"> Thank you for your order </h2>
@@ -18,9 +19,15 @@ templ OrderPage(link string) {
 	}
 }
 
-func HandleOrderForm() http.Handler {
+func HandleOrderForm(w http.ResponseWriter, req *http.Request) {
 	id, _ := uuid.NewUUID()
 	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String());
 	//TODO - actual submission logic
-	return templ.Handler(OrderPage(link))
+	file, header, err := req.FormFile("uploadedFile");
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} 
+	go storage.UploadData(file, id.String(), header.Size);
+	OrderPage(link).Render(req.Context(), w)
 }

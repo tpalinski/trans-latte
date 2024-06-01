@@ -13,6 +13,7 @@ import "bytes"
 import "net/http"
 import "github.com/google/uuid"
 import "fmt"
+import "web/storage"
 
 func orderPageContent(link string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
@@ -34,7 +35,7 @@ func orderPageContent(link string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(link)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 11, Col: 7}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 12, Col: 7}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -90,9 +91,15 @@ func OrderPage(link string) templ.Component {
 	})
 }
 
-func HandleOrderForm() http.Handler {
+func HandleOrderForm(w http.ResponseWriter, req *http.Request) {
 	id, _ := uuid.NewUUID()
 	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String())
 	//TODO - actual submission logic
-	return templ.Handler(OrderPage(link))
+	file, header, err := req.FormFile("uploadedFile")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	go storage.UploadData(file, id.String(), header.Size)
+	OrderPage(link).Render(req.Context(), w)
 }
