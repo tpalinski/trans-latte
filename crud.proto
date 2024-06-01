@@ -1,0 +1,11 @@
+syntax = "proto3";
+package messages;
+option go_package = "/messages";
+
+// Message notifying the crud backend about new order
+message NewOrder {
+	string id = 1;
+	string email = 2;
+	string description = 3;
+	string date = 4;
+}
