@@ -9,6 +9,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_ADDRESS: minio:9000
+      RABBITMQ_ADDRESS: rabbit
   minio:
     image: minio/minio:latest
     ports:
@@ -20,6 +21,13 @@ services:
     volumes:
       - ./minio/data:/data:rw
     command: server /data --console-address ":9001" --address ":9000"
+    networks:
+      - transnet
+  rabbit:
+    image: rabbitmq:3-management-alpine
+    container_name: go-images-rabbitmq
+    ports:
+      - "15672:15672"
     networks:
       - transnet
 
