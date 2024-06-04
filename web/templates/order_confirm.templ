@@ -4,6 +4,10 @@ import "net/http"
 import "github.com/google/uuid"
 import "fmt"
 import "web/storage"
+import "web/rabbit"
+import "strings"
+import "web/messages"
+import "time"
 
 templ orderPageContent(link string) {
 	<h2 class="text-xl"> Thank you for your order </h2>
@@ -19,15 +23,33 @@ templ OrderPage(link string) {
 	}
 }
 
+func parseFileName(id uuid.UUID, fileName string) string {
+	substrings := strings.Split(fileName, ".");
+	fileFormat := substrings[len(substrings)-1];
+	res := fmt.Sprintf("%s.%s", id, fileFormat);
+	return res;
+}
+
 func HandleOrderForm(w http.ResponseWriter, req *http.Request) {
 	id, _ := uuid.NewUUID()
 	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String());
-	//TODO - actual submission logic
 	file, header, err := req.FormFile("uploadedFile");
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	} 
-	go storage.UploadData(file, id.String(), header.Size);
+	// TODO - actually get customer data
+	errorChan := make(chan error);
+	fileName := parseFileName(id, header.Filename);
+	orderInfo := messages.NewOrder{Id: id.String(), Email: "test@mail.com", Description: "Some sample description", Date: time.DateOnly}
+	go storage.UploadData(file, fileName, header.Size, errorChan);
+	go rabbit.SendOrderInfo(&orderInfo, errorChan);
+	for range 2 {
+		err := <-errorChan;
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	OrderPage(link).Render(req.Context(), w)
 }

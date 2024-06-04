@@ -14,6 +14,10 @@ import "net/http"
 import "github.com/google/uuid"
 import "fmt"
 import "web/storage"
+import "web/rabbit"
+import "strings"
+import "web/messages"
+import "time"
 
 func orderPageContent(link string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
@@ -35,7 +39,7 @@ func orderPageContent(link string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(link)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 12, Col: 7}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 16, Col: 7}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -91,15 +95,33 @@ func OrderPage(link string) templ.Component {
 	})
 }
 
+func parseFileName(id uuid.UUID, fileName string) string {
+	substrings := strings.Split(fileName, ".")
+	fileFormat := substrings[len(substrings)-1]
+	res := fmt.Sprintf("%s.%s", id, fileFormat)
+	return res
+}
+
 func HandleOrderForm(w http.ResponseWriter, req *http.Request) {
 	id, _ := uuid.NewUUID()
 	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String())
-	//TODO - actual submission logic
 	file, header, err := req.FormFile("uploadedFile")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	go storage.UploadData(file, id.String(), header.Size)
+	// TODO - actually get customer data
+	errorChan := make(chan error)
+	fileName := parseFileName(id, header.Filename)
+	orderInfo := messages.NewOrder{Id: id.String(), Email: "test@mail.com", Description: "Some sample description", Date: time.DateOnly}
+	go storage.UploadData(file, fileName, header.Size, errorChan)
+	go rabbit.SendOrderInfo(&orderInfo, errorChan)
+	for range 2 {
+		err := <-errorChan
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	OrderPage(link).Render(req.Context(), w)
 }

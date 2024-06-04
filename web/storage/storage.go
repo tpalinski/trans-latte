@@ -38,12 +38,14 @@ func InitializeMinioClient() {
 	}
 }
 
-func UploadData(data io.Reader, name string, size int64) {
+func UploadData(data io.Reader, name string, size int64, outChannel chan error) {
 	ctx := context.Background();
 	_, err := client.PutObject(ctx, BUCKET_NAME, name, data, size, minio.PutObjectOptions{});
 	if err != nil {
 		log.Printf("storage.UploadData ERROR: Error while calling put object: %s\n", err.Error())
+		outChannel <- err
 	} else {
 		log.Printf("storage.UploadData: uploaded order %s\n", name)
+		outChannel <- nil
 	}
 }
