@@ -23,7 +23,7 @@ func homePageContent() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"text-xl\">If you want to make an order, please upload the document with your email address. To check the status of your order, fill out the form below</div><form action=\"/submitorder\" method=\"post\" enctype=\"multipart/form-data\"><input type=\"email\" name=\"email\"><br><input type=\"file\" name=\"uploadedFile\"><br><input type=\"submit\" value=\"Send order\"></form>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"text-xl\">If you want to make an order, please upload the document with your email address. To check the status of your order, fill out the form below</div><form action=\"/submitorder\" method=\"post\" enctype=\"multipart/form-data\" class=\"flex flex-col gap-2\"><div><label for=\"email\">Your email address </label> <input type=\"email\" name=\"email\"></div><div><label for=\"description\">Order description </label> <input type=\"text\" name=\"description\"></div><div><input type=\"file\" name=\"uploadedFile\"></div><div><input type=\"submit\" value=\"Send order\" class=\"border-white rouded-2xl p-4 bg-white text-violet-300\"></div></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -18,6 +18,7 @@ import "web/rabbit"
 import "strings"
 import "web/messages"
 import "time"
+import "mime/multipart"
 
 func orderPageContent(link string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
@@ -39,7 +40,7 @@ func orderPageContent(link string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(link)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 16, Col: 7}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/order_confirm.templ`, Line: 17, Col: 7}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -102,20 +103,36 @@ func parseFileName(id uuid.UUID, fileName string) string {
 	return res
 }
 
+func parseForm(req *http.Request, id uuid.UUID) (orderContent messages.NewOrder, file multipart.File, fileName string, fileSize int64, err error) {
+	file, header, err := req.FormFile("uploadedFile")
+	if err != nil {
+		return messages.NewOrder{}, nil, "", 0, err
+	}
+	fileName = parseFileName(id, header.Filename)
+	fileSize = header.Size
+	err = req.ParseMultipartForm(10240)
+	if err != nil {
+		return messages.NewOrder{}, nil, "", 0, err
+	}
+	email := req.FormValue("email")
+	description := req.FormValue("description")
+	if email == "" {
+		return messages.NewOrder{}, nil, "", 0, http.ErrNoLocation //just a placeholder for err not to be nil
+	}
+	orderContent = messages.NewOrder{Id: id.String(), Email: email, Description: description, Date: time.Now().String()}
+	return orderContent, file, fileName, fileSize, nil
+}
+
 func HandleOrderForm(w http.ResponseWriter, req *http.Request) {
 	id, _ := uuid.NewUUID()
 	link := fmt.Sprintf("http://localhost:2137/orders/%s", id.String())
-	file, header, err := req.FormFile("uploadedFile")
+	orderContent, file, fileName, fileSize, err := parseForm(req, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
 	}
-	// TODO - actually get customer data
 	errorChan := make(chan error)
-	fileName := parseFileName(id, header.Filename)
-	orderInfo := messages.NewOrder{Id: id.String(), Email: "test@mail.com", Description: "Some sample description", Date: time.DateOnly}
-	go storage.UploadData(file, fileName, header.Size, errorChan)
-	go rabbit.SendOrderInfo(&orderInfo, errorChan)
+	go storage.UploadData(file, fileName, fileSize, errorChan)
+	go rabbit.SendOrderInfo(&orderContent, errorChan)
 	for range 2 {
 		err := <-errorChan
 		if err != nil {
