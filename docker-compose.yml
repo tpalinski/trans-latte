@@ -11,6 +11,14 @@ services:
       MINIO_ADDRESS: minio:9000
       RABBITMQ_ADDRESS: rabbit
       REDIS_ADDRESS: redis:6379
+
+  backapp:
+    build: ./backapp
+    networks:
+      - transnet
+    environment:
+      RABBITMQ_ADDRESS: rabbit
+      
   minio:
     image: minio/minio:latest
     ports:
@@ -24,6 +32,7 @@ services:
     command: server /data --console-address ":9001" --address ":9000"
     networks:
       - transnet
+
   rabbit:
     image: rabbitmq:3-management-alpine
     container_name: translation-rabbitmq
@@ -31,6 +40,7 @@ services:
       - "15672:15672"
     networks:
       - transnet
+
   redis:
     image: redis:7-alpine
     container_name: translatino_redis
