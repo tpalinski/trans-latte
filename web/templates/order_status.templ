@@ -1,0 +1,43 @@
+package templates;
+
+import "web/messages"
+import "net/http"
+import "web/redis_cache"
+import "github.com/google/uuid"
+import "fmt"
+
+templ orderStatusContent(info *messages.OrderStatusInfo) {
+	<div class="grid text-center">
+		<h2> Order {info.Id} </h2>	
+		<p> Your description: {info.ClientDescription} </p>
+		<p>Order status: {info.StatusDescription} </p>
+		<p> Date ordered: {info.DateOrdered}</p>
+		<p> Last modified: {info.LastUpdated}</p>
+	</div>
+}
+
+templ OrderStatusPage(info *messages.OrderStatusInfo) {
+	@Wrapper() {
+		@orderStatusContent(info) 
+	}
+}
+
+func HandleOrderStatus(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	if id == "" { 
+		http.Error(w, "No valid uuid was provided", http.StatusNotFound)
+		return
+	}
+	orderId, err := uuid.Parse(id);
+	if err != nil { 
+		http.Error(w, "No valid uuid was provided", http.StatusNotFound)
+		return
+	}
+	fmt.Printf("Parsed uuid: %s", orderId.String())
+	info, err := rediscache.GetOrderInfo(orderId);
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	OrderStatusPage(&info).Render(req.Context(), w);
+}

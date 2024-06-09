@@ -9,3 +9,14 @@ message NewOrder {
 	string description = 3;
 	string date = 4;
 }
+
+// Struct representing the state of the order cached in redis
+message OrderStatusInfo {
+	string id = 1;
+	string email = 2;
+	string clientDescription = 3;
+	string dateOrdered = 4;
+	string lastUpdated = 5;
+	string statusDescription = 6;
+	optional string price = 7;
+}
