@@ -17,8 +17,8 @@ import "web/storage"
 import "web/rabbit"
 import "strings"
 import "web/messages"
-import "time"
 import "mime/multipart"
+import "google.golang.org/protobuf/types/known/timestamppb"
 
 func orderPageContent(link string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
@@ -119,7 +119,7 @@ func parseForm(req *http.Request, id uuid.UUID) (orderContent messages.NewOrder,
 	if email == "" {
 		return messages.NewOrder{}, nil, "", 0, http.ErrNoLocation //just a placeholder for err not to be nil
 	}
-	orderContent = messages.NewOrder{Id: id.String(), Email: email, Description: description, Date: time.Now().String()}
+	orderContent = messages.NewOrder{Id: id.String(), Email: email, Description: description, Date: timestamppb.Now()}
 	return orderContent, file, fileName, fileSize, nil
 }
 

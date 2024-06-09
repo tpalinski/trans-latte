@@ -1,22 +1,32 @@
 syntax = "proto3";
 package messages;
 option go_package = "/messages";
+import "google/protobuf/timestamp.proto";
 
 // Message notifying the crud backend about new order
 message NewOrder {
 	string id = 1;
 	string email = 2;
 	string description = 3;
-	string date = 4;
+	google.protobuf.Timestamp date = 4;
 }
 
-// Struct representing the state of the order cached in redis
+// Enum defining the state the order is in
+enum OrderStatus {
+	ORDER_STATUS_CREATED = 0;
+	ORDER_STATUS_PRICED = 1;
+	ORDER_STATUS_IN_PROGRESS = 2;
+	ORDER_STATUS_DONE = 3;
+}
+
+// Struct representing the state of the order, sent out by the backapp
 message OrderStatusInfo {
 	string id = 1;
 	string email = 2;
 	string clientDescription = 3;
-	string dateOrdered = 4;
-	string lastUpdated = 5;
-	string statusDescription = 6;
-	optional string price = 7;
+	google.protobuf.Timestamp dateOrdered = 4;
+	google.protobuf.Timestamp lastUpdated = 5;
+	OrderStatus status = 8;
+	optional int64 price = 7;
 }
+

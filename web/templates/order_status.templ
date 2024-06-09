@@ -10,9 +10,9 @@ templ orderStatusContent(info *messages.OrderStatusInfo) {
 	<div class="grid text-center">
 		<h2> Order {info.Id} </h2>	
 		<p> Your description: {info.ClientDescription} </p>
-		<p>Order status: {info.StatusDescription} </p>
-		<p> Date ordered: {info.DateOrdered}</p>
-		<p> Last modified: {info.LastUpdated}</p>
+		<p>Order status: {info.Status.String()} </p>
+		<p> Date ordered: {info.DateOrdered.String()}</p>
+		<p> Last modified: {info.LastUpdated.String()}</p>
 	</div>
 }
 

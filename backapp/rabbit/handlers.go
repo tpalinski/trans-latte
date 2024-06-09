@@ -1,6 +1,7 @@
 package rabbit
 
 import (
+	"backapp/db"
 	"backapp/messages"
 	"log"
 
@@ -20,7 +21,12 @@ func (h *DefaultOrderMessageHandler) HandleMessage(delivery *amqp.Delivery) erro
 	if err != nil {
 		return err;
 	}
-	//TODO - do some stuff with the data. Just console log them for now
-	log.Printf("Received order, id: %s\temail: %s", rec.Id, rec.Email);
+	log.Printf("INFO Received order, id: %s\temail: %s", rec.Id, rec.Email);
+	info, err := db.HandleNewOrder(&rec);
+	if err != nil {
+		log.Printf("ERROR db.HandleNewOrder failed to save order with id: %s", rec.Id)
+	}
+	// TODO send the confirmation further. For now, console log
+	log.Println(info.String())
 	return nil;
 }

@@ -4,12 +4,12 @@ package rediscache
 import (
 	"context"
 	"os"
-	"time"
 	"web/messages"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var client redis.Client;
@@ -31,7 +31,7 @@ func GetOrderInfo(id uuid.UUID) (orderInfo messages.OrderStatusInfo, err error) 
 	binaryData, err := client.Get(ctx, id.String()).Result();
 	if err == redis.Nil { // no key
 		// TODO - fetch missing data from backend service. For now, returns mock object
-		orderInfo = messages.OrderStatusInfo{Id: id.String(), Email: "mock@mail.com", ClientDescription: "Mock order description", StatusDescription: "Order submitted", DateOrdered: time.DateTime, LastUpdated: time.Now().String()}
+		orderInfo = messages.OrderStatusInfo{Id: id.String(), Email: "mock@mail.com", ClientDescription: "Mock order description", Status: messages.OrderStatus_ORDER_STATUS_DONE, DateOrdered: timestamppb.Now(), LastUpdated: timestamppb.Now()}
 	} else if err != nil {
 		return orderInfo, err;
 	} else {

@@ -23,4 +23,4 @@ go.work.sum
 
 /minio
 
-.env
+*.env

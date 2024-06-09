@@ -18,6 +18,9 @@ services:
       - transnet
     environment:
       RABBITMQ_ADDRESS: rabbit
+      POSTGRES_ADDRESS: postgres
+    env_file:
+      - ./.postgres.env
       
   minio:
     image: minio/minio:latest
@@ -46,6 +49,23 @@ services:
     container_name: translatino_redis
     networks:
       - transnet
+  
+  postgres:
+    image: postgres:latest
+    networks:
+      - transnet
+    env_file:
+      - ./.postgres.env
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    networks:
+      - transnet
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "3000:80"
 
 networks:
   transnet:
