@@ -4,6 +4,7 @@ package rediscache
 import (
 	"context"
 	"os"
+	"time"
 	"web/messages"
 
 	"github.com/google/uuid"
@@ -41,4 +42,13 @@ func GetOrderInfo(id uuid.UUID) (orderInfo messages.OrderStatusInfo, err error) 
 		}
 	}
 	return orderInfo, nil;
+}
+
+func UpdateOrder(order *messages.OrderStatusInfo) error {
+	data, err := proto.Marshal(order);
+	if err != nil {
+		return err;
+	}
+	client.Set(ctx, order.Id, data, time.Duration(1) * time.Minute)
+	return nil;
 }

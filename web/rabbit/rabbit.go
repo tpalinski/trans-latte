@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 	"web/messages"
+	rediscache "web/redis_cache"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
@@ -18,6 +19,8 @@ var channel *amqp.Channel;
 const TIMEOUT time.Duration = 5;
 const RETRIES int = 5;
 const SEND_TIMEOUT time.Duration = 10;
+
+const updateQueueName = "updates"
 
 func IntializeRMQClient() {
 	rabbitAddress, ok := os.LookupEnv("RABBITMQ_ADDRESS");
@@ -39,6 +42,7 @@ func IntializeRMQClient() {
 				continue;
 			}
 			log.Println("Connected to rmq instance")
+			go handleOrderUpdate();
 			<-forever;
 		}
 	}
@@ -51,9 +55,14 @@ func establishChannel() error {
 		return amqp.Error{};
 	}
 	channel = c;
+	// Sending new translation info
 	channel.ExchangeDeclare("translation", "direct", false, false, false, false, nil);
 	channel.QueueDeclare("orders", false, false, false, false, nil);
 	channel.QueueBind("orders", "translation_orders", "translation", false, nil);
+	// Order updates info
+	channel.ExchangeDeclare("updates", "topic", false, false, false, false, nil);
+	channel.QueueDeclare(updateQueueName, false, false, true, false, nil);
+	channel.QueueBind(updateQueueName, "order.*", "updates", false, nil)
 	return nil;
 }
 
@@ -62,6 +71,28 @@ func ensureChannelHealth() error {
 		return establishChannel();
 	}
 	return nil;
+}
+
+func handleOrderUpdate() {
+	// TODO - actually do the error handling/manual ack logic
+	msgs, _ := channel.Consume(
+                updateQueueName, // queue
+                "webapp",     // consumer
+                true,   // auto ack
+                true,  // exclusive
+                false,  // no local
+                false,  // no wait
+                nil,    // args
+        );
+	for msg := range msgs {
+		var info messages.OrderStatusInfo;
+		err := proto.Unmarshal(msg.Body, &info);
+		if err != nil {
+			log.Println("ERROR There was an error while serializing proto")
+		}
+		log.Printf("INFO Received order update: %s\n", info.Id)
+		go rediscache.UpdateOrder(&info)
+	}
 }
 
 func SendOrderInfo(data *messages.NewOrder, outChannel chan error) {

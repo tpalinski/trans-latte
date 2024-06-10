@@ -12,10 +12,16 @@ import (
 
 var connection *amqp.Connection;
 var channel *amqp.Channel;
+var orderChannel chan OrderUpdateChannelPayload = make(chan OrderUpdateChannelPayload);
 
 const TIMEOUT time.Duration = 5;
 const RETRIES int = 5;
 const SEND_TIMEOUT time.Duration = 10;
+
+type OrderUpdateChannelPayload struct {
+	OrderType	string
+	Payload		[]byte 
+}
 
 func IntializeRMQClient(orderHandler OrderMessageHandler) {
 	rabbitAddress, ok := os.LookupEnv("RABBITMQ_ADDRESS");
@@ -38,6 +44,7 @@ func IntializeRMQClient(orderHandler OrderMessageHandler) {
 			}
 			log.Println("Connected to rmq instance")
 			go handleIncomingOrders(orderHandler)
+			go handleUpdateSend();
 			<-forever;
 		}
 	}
@@ -50,9 +57,12 @@ func establishChannel() error {
 		return amqp.Error{};
 	}
 	channel = c;
+	// Receive messages from web app
 	channel.ExchangeDeclare("translation", "direct", false, false, false, false, nil);
 	channel.QueueDeclare("orders", false, false, false, false, nil);
 	channel.QueueBind("orders", "translation_orders", "translation", false, nil);
+	// Send out messages to topic exchange
+	channel.ExchangeDeclare("updates", "topic", false, false, false, false, nil);
 	return nil;
 }
 
@@ -73,7 +83,18 @@ func handleIncomingOrders(handler OrderMessageHandler) {
 	var forever chan struct{}
 	msgs, _ := orderChan.ConsumeWithContext(ctx, "orders", "backapp", true, false, false, false, nil);
 	for msg := range msgs {
-		go handler.HandleMessage(&msg)
+		go handler.HandleMessage(&msg, &orderChannel)
 	}
 	<-forever
+}
+
+func handleUpdateSend() {
+	if orderChannel == nil {
+		panic("handleUpdateSend: orderChannel is nil")
+	}
+	for sendData := range orderChannel {
+		ensureChannelHealth();
+		routingKey := fmt.Sprintf("order.%s", sendData.OrderType);
+		channel.Publish("updates", routingKey, false, false, amqp.Publishing{Body: sendData.Payload});
+	}
 }

@@ -10,13 +10,16 @@ import (
 )
 
 type OrderMessageHandler interface {
-	HandleMessage(*amqp.Delivery) error
+	HandleMessage(*amqp.Delivery, *chan OrderUpdateChannelPayload) error
 }
 
 type DefaultOrderMessageHandler struct {};
 
-func (h *DefaultOrderMessageHandler) HandleMessage(delivery *amqp.Delivery) error {
+func (h *DefaultOrderMessageHandler) HandleMessage(delivery *amqp.Delivery, outChannel *chan OrderUpdateChannelPayload) error {
 	var rec messages.NewOrder;
+	if outChannel == nil {
+		panic("Output channel uninitialized")
+	}
 	err := proto.Unmarshal(delivery.Body, &rec) 
 	if err != nil {
 		return err;
@@ -26,7 +29,11 @@ func (h *DefaultOrderMessageHandler) HandleMessage(delivery *amqp.Delivery) erro
 	if err != nil {
 		log.Printf("ERROR db.HandleNewOrder failed to save order with id: %s", rec.Id)
 	}
-	// TODO send the confirmation further. For now, console log
-	log.Println(info.String())
+	serialized, err := proto.Marshal(&info);
+	if err != nil {
+		return err
+	}
+	*outChannel<-OrderUpdateChannelPayload{Payload: serialized, OrderType: info.Status.String()};
 	return nil;
 }
+
