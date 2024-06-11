@@ -1,6 +1,8 @@
 package rabbit
 
 import (
+	"backapp/db"
+	"backapp/messages"
 	"context"
 	"fmt"
 	"log"
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 )
 
 var connection *amqp.Connection;
@@ -44,6 +47,7 @@ func IntializeRMQClient(orderHandler OrderMessageHandler) {
 			}
 			log.Println("Connected to rmq instance")
 			go handleIncomingOrders(orderHandler)
+			go handleOrderInfoRequests();
 			go handleUpdateSend();
 			<-forever;
 		}
@@ -63,6 +67,9 @@ func establishChannel() error {
 	channel.QueueBind("orders", "translation_orders", "translation", false, nil);
 	// Send out messages to topic exchange
 	channel.ExchangeDeclare("updates", "topic", false, false, false, false, nil);
+	// Order info exchange
+	channel.QueueDeclare("info_requests", false, false, false, false, nil);
+	channel.QueueBind("info_requests", "info_requests", "translation", false, nil)
 	return nil;
 }
 
@@ -84,6 +91,33 @@ func handleIncomingOrders(handler OrderMessageHandler) {
 	msgs, _ := orderChan.ConsumeWithContext(ctx, "orders", "backapp", true, false, false, false, nil);
 	for msg := range msgs {
 		go handler.HandleMessage(&msg, &orderChannel)
+	}
+	<-forever
+}
+
+func handleOrderInfoRequests() {
+	orderChan, err := connection.Channel();
+	if err != nil {
+		log.Printf("ERROR: Could not open order handling channel")
+	}
+	defer orderChan.Close();
+	ctx := context.Background();
+	var forever chan struct{}
+	msgs, _ := orderChan.ConsumeWithContext(ctx, "info_requests", "backapp", true, false, false, false, nil);
+	for msg := range msgs {
+		var info messages.GetOrder;
+		err := proto.Unmarshal(msg.Body, &info);
+		if err != nil {
+			log.Println("ERROR: handleOrderInfoRequests - could not unmarshall protobuf")
+		} else {
+			order, err := db.HandleOrderInfo(info.Id)
+			if err != nil {
+				log.Println("ERROR: handleOrderInfoRequests - could not fetch order info")
+			}
+			binaryData, _ := proto.Marshal(&order)
+			payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: "update"}
+			orderChannel<-payload
+		}
 	}
 	<-forever
 }

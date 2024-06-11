@@ -68,3 +68,9 @@ func HandleNewOrder(msg *messages.NewOrder) (info messages.OrderStatusInfo, err 
 	info = model.OrderToProto(&fetched);
 	return info, nil
 }
+
+func HandleOrderInfo(id string) (info messages.OrderStatusInfo, err error) {
+	order := getOrder(id)
+	info = model.OrderToProto(&order)
+	return info, nil
+}

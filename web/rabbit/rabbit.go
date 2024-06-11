@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 	"web/messages"
-	rediscache "web/redis_cache"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
@@ -21,6 +20,8 @@ const RETRIES int = 5;
 const SEND_TIMEOUT time.Duration = 10;
 
 const updateQueueName = "updates"
+
+var OrderUpdateChannel chan *messages.OrderStatusInfo = make(chan *messages.OrderStatusInfo);
 
 func IntializeRMQClient() {
 	rabbitAddress, ok := os.LookupEnv("RABBITMQ_ADDRESS");
@@ -63,6 +64,9 @@ func establishChannel() error {
 	channel.ExchangeDeclare("updates", "topic", false, false, false, false, nil);
 	channel.QueueDeclare(updateQueueName, false, false, true, false, nil);
 	channel.QueueBind(updateQueueName, "order.*", "updates", false, nil)
+	//Order updates requests
+	channel.QueueDeclare("info_requests", false, false, false, false, nil);
+	channel.QueueBind("info_requests", "info_requests", "translation", false, nil)
 	return nil;
 }
 
@@ -91,7 +95,7 @@ func handleOrderUpdate() {
 			log.Println("ERROR There was an error while serializing proto")
 		}
 		log.Printf("INFO Received order update: %s\n", info.Id)
-		go rediscache.UpdateOrder(&info)
+		OrderUpdateChannel<-&info
 	}
 }
 
@@ -107,4 +111,17 @@ func SendOrderInfo(data *messages.NewOrder, outChannel chan error) {
 	defer cancel();
 	channel.PublishWithContext(ctx, "translation", "translation_orders", false, false, amqp.Publishing{Body: binaryData, ContentType: "data/binary"})
 	outChannel<-nil;
+}
+
+func SendOrderUpdateRequest(data *messages.GetOrder) error {
+	ensureChannelHealth();
+	binaryData, err := proto.Marshal(data);
+	if err != nil {
+		log.Println("ERROR: rabbit.SendOrderUpdateRequest - error marshalling protobuf")
+		return err;
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), SEND_TIMEOUT)
+	defer cancel();
+	channel.PublishWithContext(ctx, "translation", "info_requests", false, false, amqp.Publishing{Body: binaryData})
+	return nil;
 }

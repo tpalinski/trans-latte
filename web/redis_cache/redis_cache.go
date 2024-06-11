@@ -3,14 +3,15 @@ package rediscache
 
 import (
 	"context"
+	"log"
 	"os"
 	"time"
 	"web/messages"
+	"web/rabbit"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var client redis.Client;
@@ -26,17 +27,22 @@ func InitializeRedisConnection() {
 		Password: "",
 		DB: 0,
 	})
+	go func() {
+		for info := range rabbit.OrderUpdateChannel {
+			go updateOrder(info)
+		}
+	}()
 }
 
 func GetOrderInfo(id uuid.UUID) (orderInfo messages.OrderStatusInfo, err error) {
 	binaryData, err := client.Get(ctx, id.String()).Result();
 	if err == redis.Nil { // no key
-		// TODO - fetch missing data from backend service. For now, returns mock object
-		orderInfo = messages.OrderStatusInfo{Id: id.String(), Email: "mock@mail.com", ClientDescription: "Mock order description", Status: messages.OrderStatus_ORDER_STATUS_DONE, DateOrdered: timestamppb.Now(), LastUpdated: timestamppb.Now()}
+		orderInfo = handleMissingKey(id);
 	} else if err != nil {
 		return orderInfo, err;
 	} else {
 		err = proto.Unmarshal([]byte(binaryData), &orderInfo);
+		log.Printf("INFO Cache hit for order: %s", orderInfo.Id)
 		if err != nil {
 			return orderInfo, err;
 		}
@@ -44,11 +50,36 @@ func GetOrderInfo(id uuid.UUID) (orderInfo messages.OrderStatusInfo, err error) 
 	return orderInfo, nil;
 }
 
-func UpdateOrder(order *messages.OrderStatusInfo) error {
+func updateOrder(order *messages.OrderStatusInfo) error {
 	data, err := proto.Marshal(order);
 	if err != nil {
 		return err;
 	}
 	client.Set(ctx, order.Id, data, time.Duration(1) * time.Minute)
 	return nil;
+}
+
+func handleMissingKey(id uuid.UUID) (orderInfo messages.OrderStatusInfo) {
+	requestOrderData(id)
+	const timeoutMs time.Duration = 200;
+	const retries int = 10;
+	for range retries {
+		binaryData, err := client.Get(ctx, id.String()).Result();
+		if err == redis.Nil {
+			time.Sleep(timeoutMs * time.Millisecond)
+		} else {
+			proto.Unmarshal([]byte(binaryData), &orderInfo);
+			log.Printf("INFO Successfully fetched order info for order: %s", orderInfo.Id)
+			return
+		}
+	}
+	return
+}
+
+func requestOrderData(id uuid.UUID) {
+	info := messages.GetOrder{Id: id.String()}
+	err := rabbit.SendOrderUpdateRequest(&info)
+	if err != nil {
+		log.Printf("ERROR: redis_cache.requestOrderData - failed for order: %s", id.String())
+	}
 }

@@ -11,8 +11,8 @@ templ orderStatusContent(info *messages.OrderStatusInfo) {
 		<h2> Order {info.Id} </h2>	
 		<p> Your description: {info.ClientDescription} </p>
 		<p>Order status: {info.Status.String()} </p>
-		<p> Date ordered: {info.DateOrdered.String()}</p>
-		<p> Last modified: {info.LastUpdated.String()}</p>
+		<p> Date ordered: {info.DateOrdered.AsTime().Local().String()}</p>
+		<p> Last modified: {info.LastUpdated.AsTime().Local().String()}</p>
 	</div>
 }
 

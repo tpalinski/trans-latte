@@ -30,3 +30,7 @@ message OrderStatusInfo {
 	optional int64 price = 7;
 }
 
+// Struct representing a request asking for order status update for web app
+message GetOrder {
+	string id = 1;
+}
