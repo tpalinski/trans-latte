@@ -1,0 +1,14 @@
+package templates;
+
+import "web/messages"
+
+
+templ OrderStatus(info messages.OrderStatusInfo) {
+	<div class="grid text-center">
+		<h2> Order {info.Id} </h2>	
+		<p> Your description: {info.ClientDescription} </p>
+		<p>Order status: {info.Status.String()} </p>
+		<p> Date ordered: {info.DateOrdered.AsTime().Local().String()}</p>
+		<p> Last modified: {info.LastUpdated.AsTime().Local().String()}</p>
+	</div>
+}

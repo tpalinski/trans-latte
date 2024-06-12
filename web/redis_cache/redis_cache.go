@@ -3,6 +3,7 @@ package rediscache
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -37,7 +38,11 @@ func InitializeRedisConnection() {
 func GetOrderInfo(id uuid.UUID) (orderInfo messages.OrderStatusInfo, err error) {
 	binaryData, err := client.Get(ctx, id.String()).Result();
 	if err == redis.Nil { // no key
-		orderInfo = handleMissingKey(id);
+		res := handleMissingKey(id)
+		if res == nil {
+			return orderInfo, fmt.Errorf("no order with supplied uuid")
+		}
+		orderInfo = *res;
 	} else if err != nil {
 		return orderInfo, err;
 	} else {
@@ -59,21 +64,22 @@ func updateOrder(order *messages.OrderStatusInfo) error {
 	return nil;
 }
 
-func handleMissingKey(id uuid.UUID) (orderInfo messages.OrderStatusInfo) {
+func handleMissingKey(id uuid.UUID) (orderInfo *messages.OrderStatusInfo) {
 	requestOrderData(id)
-	const timeoutMs time.Duration = 200;
-	const retries int = 10;
+	const timeoutMs time.Duration = 100;
+	const retries int = 5;
 	for range retries {
 		binaryData, err := client.Get(ctx, id.String()).Result();
 		if err == redis.Nil {
 			time.Sleep(timeoutMs * time.Millisecond)
 		} else {
-			proto.Unmarshal([]byte(binaryData), &orderInfo);
+			orderInfo = &messages.OrderStatusInfo{}
+			proto.Unmarshal([]byte(binaryData), orderInfo);
 			log.Printf("INFO Successfully fetched order info for order: %s", orderInfo.Id)
 			return
 		}
 	}
-	return
+	return nil
 }
 
 func requestOrderData(id uuid.UUID) {

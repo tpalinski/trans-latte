@@ -7,12 +7,10 @@ import "github.com/google/uuid"
 import "fmt"
 
 templ orderStatusContent(info *messages.OrderStatusInfo) {
-	<div class="grid text-center">
-		<h2> Order {info.Id} </h2>	
-		<p> Your description: {info.ClientDescription} </p>
-		<p>Order status: {info.Status.String()} </p>
-		<p> Date ordered: {info.DateOrdered.AsTime().Local().String()}</p>
-		<p> Last modified: {info.LastUpdated.AsTime().Local().String()}</p>
+	<div 
+	hx-get={getApiRequestPath(info)}
+	hx-trigger="every 5s">
+		@OrderStatus(*info)
 	</div>
 }
 
@@ -20,6 +18,10 @@ templ OrderStatusPage(info *messages.OrderStatusInfo) {
 	@Wrapper() {
 		@orderStatusContent(info) 
 	}
+}
+
+func getApiRequestPath(info *messages.OrderStatusInfo) string {
+	return fmt.Sprintf("/api/orders/%s", info.Id)
 }
 
 func HandleOrderStatus(w http.ResponseWriter, req *http.Request) {
