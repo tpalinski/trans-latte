@@ -124,11 +124,13 @@ func handleOrderInfoRequests() {
 			order, err := db.HandleOrderInfo(info.Id)
 			if err != nil {
 				log.Println("ERROR: handleOrderInfoRequests - could not fetch order info")
+
+			} else {
+				binaryData, _ := proto.Marshal(&order)
+				payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: OrderTypeInfo}
+				orderChannel<-payload
 			}
-			binaryData, _ := proto.Marshal(&order)
-			payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: OrderTypeInfo}
 			msg.Ack(false)
-			orderChannel<-payload
 		}
 	}
 	<-forever

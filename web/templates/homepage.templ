@@ -5,21 +5,21 @@ templ homePageContent() {
 		If you want to make an order, please upload the document with your email address. To check the status of your order, fill out the form below
 	</div>
 	<form action="/submitorder" method="post" enctype="multipart/form-data"
-	class="flex flex-col gap-2"> 
-		<div>
-			<label for="email"> Your email address </label>
+	class="flex flex-col gap-4"> 
+		<div class="flex items-center justify-evenly">
+			<label for="email" class="p-4"> Your email address </label>
 			<input type="email" name="email">
 		</div>
-		<div>
-			<label for="description"> Order description </label>
-			<input type="text" name="description">
+		<div class="flex items-center justify-evenly">
+			<label for="description" class="p-4" > Order description </label>
+			<textarea name="description" rows="2" cols="30"> </textarea>
 		</div>
-		<div>
+		<div class="flex items-center justify-evenly">
 			<input type="file" name="uploadedFile">
 		</div>
-		<div>
+		<div class="flex items-center justify-evenly">
 			<input type="submit" value="Send order"
-			class="border-white rouded-2xl p-4 bg-white text-violet-300">
+			class="border-white rounded-2xl p-4 bg-white text-violet-300">
 		</div>
 	</form>
 	

@@ -31,6 +31,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_ADDRESS: minio:9000
+      DELAY: 10
       
   minio:
     image: minio/minio:latest

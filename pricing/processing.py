@@ -1,8 +1,12 @@
+import os
 from typing import Any
 import crud_pb2
 import files
 import rabbit
 from pypdf import PdfReader
+import time
+
+ARTIFICIAL_DELAY = os.environ.get("DELAY", "0")
 
 def process_rmq_request(ch: Any, method: Any, properties: Any, body: Any) -> None:
     payload = crud_pb2.OrderStatusInfo()
@@ -18,6 +22,7 @@ def process_rmq_request(ch: Any, method: Any, properties: Any, body: Any) -> Non
     price = calculate_document_price(downloaded_path)
     payload.price = price
     body = payload.SerializeToString()
+    time.sleep(int(ARTIFICIAL_DELAY))
     rabbit.send_order_update(body)
     print(f"Successfully processed order {payload.id}")
 

@@ -71,6 +71,9 @@ func HandleNewOrder(msg *messages.NewOrder) (info messages.OrderStatusInfo, err 
 
 func HandleOrderInfo(id string) (info messages.OrderStatusInfo, err error) {
 	order := getOrder(id)
+	if order.Id == "" {
+		return info, fmt.Errorf("No such record in db")
+	}
 	info = model.OrderToProto(&order)
 	return info, nil
 }

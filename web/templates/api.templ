@@ -1,6 +1,7 @@
 package templates;
 
 import "web/messages"
+import "fmt"
 
 
 templ OrderStatus(info messages.OrderStatusInfo) {
@@ -10,5 +11,9 @@ templ OrderStatus(info messages.OrderStatusInfo) {
 		<p>Order status: {info.Status.String()} </p>
 		<p> Date ordered: {info.DateOrdered.AsTime().Local().String()}</p>
 		<p> Last modified: {info.LastUpdated.AsTime().Local().String()}</p>
+		if info.Price != nil {
+			<p> Price: {fmt.Sprintf("%d", *info.Price)} </p>
+		}
 	</div>
 }
+
