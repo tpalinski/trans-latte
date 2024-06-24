@@ -21,6 +21,16 @@ services:
       POSTGRES_ADDRESS: postgres
     env_file:
       - ./.postgres.env
+
+  pricing:
+    build: ./pricing
+    networks:
+      - transnet
+    environment:
+      RABBITMQ_ADDRESS: rabbit
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_ADDRESS: minio:9000
       
   minio:
     image: minio/minio:latest
