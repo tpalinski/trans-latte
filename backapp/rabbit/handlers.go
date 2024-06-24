@@ -33,7 +33,7 @@ func (h *DefaultOrderMessageHandler) HandleMessage(delivery *amqp.Delivery, outC
 	if err != nil {
 		return err
 	}
-	*outChannel<-OrderUpdateChannelPayload{Payload: serialized, OrderType: info.Status.String()};
+	*outChannel<-OrderUpdateChannelPayload{Payload: serialized, OrderType: OrderTypeNew};
 	return nil;
 }
 

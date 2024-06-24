@@ -43,3 +43,18 @@ func OrderToProto(model *OrderInfo) (res messages.OrderStatusInfo) {
 	}
 	return 
 }
+
+func InfoToOrder(msg *messages.OrderStatusInfo) OrderInfo {
+	if msg.Price == nil {
+		*msg.Price = -1
+	}
+	return OrderInfo{
+		Email: msg.Email,
+		Id: msg.Id,
+		Description: msg.ClientDescription,
+		DateOrdered: msg.DateOrdered.AsTime(),
+		UpdatedAt: msg.LastUpdated.AsTime(),
+		Price: int(*msg.Price),
+		StatusDescription: msg.Status.String(),
+	}
+}

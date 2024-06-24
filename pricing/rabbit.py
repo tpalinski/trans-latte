@@ -26,8 +26,7 @@ def initialize_rabbit_connection(consume_callback: Callable[[Any, Any, Any, Any]
     queue_name = result.method.queue
     exchange = channel.exchange_declare(EXCHANGE_NAME, "topic")
 
-    # TODO - actually do it based on protobuf to string
-    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="order.*")
+    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key="order.new")
 
     # Output queue
     channel.exchange_declare("pricing", "direct")

@@ -26,6 +26,12 @@ type OrderUpdateChannelPayload struct {
 	Payload		[]byte 
 }
 
+const (
+	OrderTypeNew = "new"
+	OrderTypeInfo = "info"
+	OrderTypePricing = "pricing"
+)
+
 func IntializeRMQClient(orderHandler OrderMessageHandler) {
 	rabbitAddress, ok := os.LookupEnv("RABBITMQ_ADDRESS");
 	if !ok {
@@ -49,6 +55,7 @@ func IntializeRMQClient(orderHandler OrderMessageHandler) {
 			go handleIncomingOrders(orderHandler)
 			go handleOrderInfoRequests();
 			go handleUpdateSend();
+			go handleOrderPricing();
 			<-forever;
 		}
 	}
@@ -70,6 +77,10 @@ func establishChannel() error {
 	// Order info exchange
 	channel.QueueDeclare("info_requests", false, false, false, false, nil);
 	channel.QueueBind("info_requests", "info_requests", "translation", false, nil)
+	// Pricing direct queue
+	channel.ExchangeDeclare("pricing", "direct", false, false, false, false, nil);
+	channel.QueueDeclare("pricing", false, false, false, false, nil)
+	channel.QueueBind("pricing", "pricing", "pricing", false, nil);
 	return nil;
 }
 
@@ -103,7 +114,7 @@ func handleOrderInfoRequests() {
 	defer orderChan.Close();
 	ctx := context.Background();
 	var forever chan struct{}
-	msgs, _ := orderChan.ConsumeWithContext(ctx, "info_requests", "backapp", true, false, false, false, nil);
+	msgs, _ := orderChan.ConsumeWithContext(ctx, "info_requests", "backapp", false, false, false, false, nil);
 	for msg := range msgs {
 		var info messages.GetOrder;
 		err := proto.Unmarshal(msg.Body, &info);
@@ -115,7 +126,36 @@ func handleOrderInfoRequests() {
 				log.Println("ERROR: handleOrderInfoRequests - could not fetch order info")
 			}
 			binaryData, _ := proto.Marshal(&order)
-			payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: "update"}
+			payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: OrderTypeInfo}
+			msg.Ack(false)
+			orderChannel<-payload
+		}
+	}
+	<-forever
+}
+
+func handleOrderPricing() {
+	priceChan, err := connection.Channel();
+	if err != nil {
+		log.Printf("ERROR: Could not open order handling channel")
+	}
+	defer priceChan.Close();
+	ctx := context.Background();
+	var forever chan struct{}
+	msgs, _ := priceChan.ConsumeWithContext(ctx, "pricing", "pricing", false, false, false, false, nil);
+	for msg := range msgs {
+		var info messages.OrderStatusInfo;
+		err := proto.Unmarshal(msg.Body, &info);
+		if err != nil {
+			log.Println("ERROR: handleOrderPricing - could not unmarshall protobuf")
+		} else {
+			order, err := db.HandleOrderPricing(&info)
+			if err != nil {
+				log.Println("ERROR: handleOrderPricing - error while updating price")
+			}
+			binaryData, _ := proto.Marshal(order)
+			payload := OrderUpdateChannelPayload{Payload: binaryData, OrderType: OrderTypePricing}
+			msg.Ack(false)
 			orderChannel<-payload
 		}
 	}

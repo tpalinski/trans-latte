@@ -74,3 +74,10 @@ func HandleOrderInfo(id string) (info messages.OrderStatusInfo, err error) {
 	info = model.OrderToProto(&order)
 	return info, nil
 }
+
+func HandleOrderPricing(msg *messages.OrderStatusInfo) (*messages.OrderStatusInfo, error) {
+	msg.Status = messages.OrderStatus_ORDER_STATUS_PRICED;
+	dbStruct := model.InfoToOrder(msg);
+	updateOrder(&dbStruct)
+	return msg, nil
+}
